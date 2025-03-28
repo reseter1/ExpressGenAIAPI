@@ -12,6 +12,10 @@ Hệ thống API Generative AI là một máy chủ Express.js được xây d�
 - Duy trì ngữ cảnh hội thoại qua nhiều lượt tương tác
 - Xử lý đồng thời nhiều yêu cầu với hệ thống phân cụm (cluster)
 
+## Tài liệu
+
+Tham khảo tài liệu đầy đủ tại [đây](https://reseter-genai.apidog.io/).
+
 ## Cấu trúc dự án
 
 ```
