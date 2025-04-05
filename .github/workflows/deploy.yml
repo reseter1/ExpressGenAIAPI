@@ -40,6 +40,6 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }}
         port: 22
         source: "./*"
-        target: "~/public_html"
+        target: "~/public_html/RootApp"
         rm: false
         overwrite: true
