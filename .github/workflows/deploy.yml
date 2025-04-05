@@ -1,0 +1,46 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref_name }}
+
+    - name: Replace database credentials in production config
+      env:
+        DB_USERNAME: ${{ secrets.DB_USERNAME }}
+        DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        DB_NAME: ${{ secrets.DB_NAME }}
+      run: |
+        jq \
+        --arg username "$DB_USERNAME" \
+        --arg password "$DB_PASSWORD" \
+        --arg database "$DB_NAME" \
+        '.production.username = $username |
+         .production.password = $password |
+         .production.database = $database' \
+        config/database.config.json > tmp.json && mv tmp.json config/database.config.json
+        cat config/database.config.json
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Copy to hosting
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        port: 22
+        source: "./*"
+        target: "~/public_html"
+        rm: false
+        overwrite: true

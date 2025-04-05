@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const timeout = require('connect-timeout');
-const { IP_ALWAYS_DATA, PORT_ALWAYS_DATA } = require('../constants/main.constants');
 const mainRoutes = require('../routes/main.routes');
 const db = require('../models/db.models');
 const { errorHandlingMiddleware, expressJsonMiddleware } = require('../middlewares/main.middlewares');
@@ -25,7 +24,7 @@ async function startServer() {
     
     try {
         await db.sequelize.authenticate();
-        app.listen(PORT_ALWAYS_DATA, IP_ALWAYS_DATA, () => {
+        app.listen(6789, () => {
             console.log('App running on AlwaysData');
         });
     } catch (error) {
