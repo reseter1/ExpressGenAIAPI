@@ -58,13 +58,17 @@ Tham khảo tài liệu đầy đủ tại [đây](https://genai-reseter.apidog.
 
 ### Text-to-Speech
 
-- Endpoint: `/api/v2/tts-gen`
+- Endpoint: `/api/v2/ttsv1-gen`
 - Chuyển đổi văn bản thành giọng nói
-- Sử dụng dịch vụ TTS từ Google
+- Hỗ trợ đa ngôn ngữ nhưng có thể thường xuyên lỗi và không up time 100%
+
+- Endpoint: `/api/v2/ttsv2-gen`
+- Chuyển đổi văn bản thành giọng nói
+- Hỗ trợ ngôn ngữ Việt Nam và Anh Ngữ và đảm bảo up time 100%
 
 ## Yêu cầu hệ thống
 
-- Node.js (phiên bản 14.x trở lên)
+- Node.js (phiên bản 20.x trở lên)
 - MariaDB hoặc MySQL
 - Docker (tùy chọn)
 
@@ -75,7 +79,8 @@ Tham khảo tài liệu đầy đủ tại [đây](https://genai-reseter.apidog.
 | `/helloworld` | GET | Kiểm tra máy chủ hoạt động |
 | `/api/v2/ai-gen` | POST | Tạo văn bản từ AI với prompt |
 | `/api/v2/upload-file` | POST | Tải lên tệp để phân tích với AI |
-| `/api/v2/tts-gen` | POST | Chuyển đổi văn bản thành giọng nói |
+| `/api/v2/ttsv1-gen` | POST | Chuyển đổi văn bản thành giọng nói (phiên bản 1 - hỗ trợ đa ngôn ngữ nhưng có thể thường xuyên lỗi và không up time 100%) |
+| `/api/v2/ttsv2-gen` | POST | Chuyển đổi văn bản thành giọng nói (phiên bản 2 - chỉ hỗ trợ ngôn ngữ Việt Nam và Anh Ngữ và đảm bảo up time 100%) |
 
 ### Yêu cầu API:
 

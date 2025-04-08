@@ -29,7 +29,7 @@ const storage = multer.diskStorage({
     }
 });
 
-const upload = multer({ 
+const upload = multer({
     storage,
     limits: {
         fileSize: FILE_SIZE_LIMIT * 1024 * 1024

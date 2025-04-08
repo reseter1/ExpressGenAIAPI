@@ -1,5 +1,4 @@
 const fs = require('fs');
-const { Readable } = require('stream');
 const path = require('path');
 const crypto = require('crypto');
 const moment = require('moment-timezone');
@@ -21,7 +20,7 @@ const tts = async (text, voiceId, speed, model) => {
             });
 
             if (!response.ok) {
-                throw new Error("Failed to initiate text-to-speech conversion");
+                throw new Error("Failed to initiate text-to-speech conversion from server");
             }
 
             const { uuid } = await response.json();
@@ -38,7 +37,7 @@ const tts = async (text, voiceId, speed, model) => {
 
 
                 if (!getMediaResponse.ok) {
-                    throw new Error("Failed to get media");
+                    throw new Error("Failed to get media from server");
                 }
 
                 const jsonResponse = await getMediaResponse.json();
@@ -86,7 +85,7 @@ const splitTextIntelligent = async (text) => {
 const fetchMp3 = async (url) => {
     const response = await fetch(url);
     if (!response.ok) {
-        throw new Error(`Lỗi HTTP: ${response.status}`);
+        throw new Error(`Error HTTP: ${response.status}`);
     }
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
@@ -119,16 +118,14 @@ const saveBufferToFile = async (buffer, text, voiceId) => {
 const ttsService = {
     ttsIntelligent: async (text, voiceId, speed, model) => {
         const splitText = await splitTextIntelligent(text);
-        const result = [];
         const mediaUrls = await Promise.all(splitText.map(async (chunk) => {
             const mediaUrl = await tts(chunk, voiceId, speed, model);
             if (!mediaUrl) {
-                throw new Error("Failed to create TTS, please check credit balance");
+                throw new Error("Failed to create TTS, please check credit balance from server");
             }
             return mediaUrl;
         }));
-        result.push(...mediaUrls);
-        const bufferMedia = await mergeMp3Buffers(result);
+        const bufferMedia = await mergeMp3Buffers(mediaUrls);
 
         const fileName = await saveBufferToFile(bufferMedia, text, voiceId);
         const url = process.env.APP_URL + '/files/tts-audio/' + fileName;
@@ -139,7 +136,7 @@ const ttsService = {
             await transaction.commit();
         } catch (error) {
             await transaction.rollback();
-            throw new Error("Failed to save speech record");
+            throw new Error("Failed to save speech record from server");
         }
         return { url, timestamp: createAt };
     },
