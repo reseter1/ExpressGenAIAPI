@@ -1,4 +1,14 @@
 const contextService = require('../services/context.services');
+const { modelsList } = require('../helpers/main.helpers');
+
+exports.getModelsList = async (req, res) => {
+    try {
+        const models = modelsList();
+        res.status(200).json({ success: true, data: models });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error get models list from server', error: error.message });
+    }
+};
 
 exports.getMessageInContext = async (req, res) => {
     try {
