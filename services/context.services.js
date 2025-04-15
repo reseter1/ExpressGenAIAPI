@@ -20,6 +20,20 @@ const contextService = {
             hasContextId = await db.Files.findOne({ where: { contextId }, attributes: ['contextId'] });
         }
         return hasContextId !== null;
+    },
+    getAllMessagesInContext: async (contextId) => {
+        const messages = await db.ChatMessages.findAll({
+            where: { contextId },
+            order: [['index', 'ASC']]
+        });
+        return messages;
+    },
+    getAllFilesInContext: async (contextId) => {
+        const files = await db.Files.findAll({
+            where: { contextId },
+            order: [['createdAt', 'ASC']]
+        });
+        return files;
     }
 };
 
