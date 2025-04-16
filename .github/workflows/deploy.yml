@@ -51,14 +51,3 @@ jobs:
         target: "/workspace/Project1"
         rm: false
         overwrite: true
-
-    - name: Restart PM2 process
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USERNAME }}
-        password: ${{ secrets.SSH_PASSWORD }}
-        port: 22
-        script: |
-          cd /workspace/Project1
-          ~/.nvm/versions/node/v20.19.0/bin/pm2 restart 0
