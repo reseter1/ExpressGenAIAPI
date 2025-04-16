@@ -10,19 +10,19 @@ exports.normalizeModelAI = (modelAI) => {
 exports.modelsList = () => {
     return [
         {
-            name: 'NULL Flash',
+            name: 'MFC Plus',
             value: 'null-flash',
-            description: 'The best model for text generation'
+            description: 'Hiệu quả cho các tác vụ suy luận ở mức trung bình, tốc độ cao'
         },
         {
-            name: 'NULL Pro',
+            name: 'MFC Pro',
             value: 'null-pro',
-            description: 'The best model for handling deep and complex tasks'
+            description: 'Hiệu quả cho các tác vụ suy luận ở mức cao, tốc độ trung bình'
         },
         {
-            name: 'NULL Base',
+            name: 'MFC Base',
             value: 'null-base',
-            description: 'Basic model for text generation'
+            description: 'Hiệu quả cho các tác vụ suy luận ở mức thấp, tốc độ cao'
         }
     ]
 };

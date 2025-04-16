@@ -35,12 +35,12 @@ const uploadController = {
             }
 
             if (req.body.contextId) {
-                const contextIdExists = await contextService.contextIdExists(req.body.contextId);
-                if (!contextIdExists) {
-                    return res.status(404).json({
+                const isValidContextId = await contextService.isValidContextIdFormat(req.body.contextId);
+                if (!isValidContextId) {
+                    return res.status(400).json({
                         success: false,
-                        message: 'Invalid context ID',
-                        error: 'Invalid context ID'
+                        message: 'Invalid context ID format',
+                        error: 'Invalid context ID format'
                     });
                 }
 
