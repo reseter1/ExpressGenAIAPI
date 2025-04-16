@@ -48,6 +48,6 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }}
         port: 22
         source: "./*"
-        target: "/workspace/Project1"
+        target: "/workspaces/Project1"
         rm: false
         overwrite: true
