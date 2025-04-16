@@ -37,6 +37,9 @@ jobs:
     - name: Install dependencies
       run: npm install
 
+    - name: Remove .git folder
+      run: rm -rf .git
+
     - name: Copy to hosting
       uses: appleboy/scp-action@master
       with:
@@ -45,6 +48,17 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }}
         port: 22
         source: "./*"
-        target: "~/public_html/RootApp"
+        target: "/workspace/Project1"
         rm: false
         overwrite: true
+
+    - name: Restart PM2 process
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        port: 22
+        script: |
+          cd /workspace/Project1
+          pm2 restart 0

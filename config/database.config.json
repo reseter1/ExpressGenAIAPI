@@ -11,6 +11,6 @@
     "password": "NULLCommand1.HashPassword@",
     "database": "genai-openfxt_db",
     "host": "127.0.0.1",
-    "dialect": "mariadb"
+    "dialect": "mysql"
   }
 }
