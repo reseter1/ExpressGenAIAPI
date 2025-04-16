@@ -35,3 +35,12 @@ exports.getFileInContext = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error get file in context from server', error: error.message });
     }
 };
+
+exports.getNewContextId = async (req, res) => {
+    try {
+        const contextId = await contextService.generateContextId();
+        res.status(200).json({ success: true, data: contextId });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error get new context id from server', error: error.message });
+    }
+};

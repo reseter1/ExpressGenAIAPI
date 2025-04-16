@@ -15,6 +15,7 @@ router.post('/api/v2/ttsv2-gen', validateTTSV2Params, ttsController.genSpeechV2)
 router.post('/api/admin/get-messages', contextController.getMessageInContext);
 router.post('/api/admin/get-files', contextController.getFileInContext);
 router.get('/api/admin/get-models', contextController.getModelsList);
+router.get('/api/admin/get-new-context-id', contextController.getNewContextId);
 router.use((req, res) => {
     res.status(404).json({
         success: false,
