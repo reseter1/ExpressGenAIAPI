@@ -1,123 +1,312 @@
-# Generative AI API
 
-Dự án này cung cấp một máy chủ API để tương tác với các mô hình AI tạo sinh của Google (Google Generative AI), hỗ trợ tạo văn bản và chuyển đổi văn bản thành giọng nói (TTS).
+# Express GenAI API - Tài liệu kỹ thuật
 
-## Tổng quan
+## 1. Kiến trúc tổng quan
 
-Hệ thống API Generative AI là một máy chủ Express.js được xây dựng để cung cấp khả năng tương tác với các mô hình AI tạo sinh thông qua các API RESTful. Hệ thống hỗ trợ:
+API Platform này được xây dựng trên nền tảng Node.js/Express, cung cấp các dịch vụ AI bao gồm:
+- Google Generative AI (text generation, conversation context)
+- Phân tích dựa trên nội dung file
+- Text-to-Speech (TTS) v1 & v2
+- Tích hợp clustering, caching
 
-- Tạo văn bản từ AI dựa trên prompt
-- Tải lên tệp để phân tích
-- Tạo giọng nói từ văn bản (Text-to-Speech)
-- Duy trì ngữ cảnh hội thoại qua nhiều lượt tương tác
-- Xử lý đồng thời nhiều yêu cầu với hệ thống phân cụm (cluster)
-
-## Tài liệu
-
-Tham khảo tài liệu đầy đủ tại [đây](https://genai-reseter.apidog.io/).
-
-## Cấu trúc dự án
+### Kiến trúc hệ thống
 
 ```
-├── app.js                  # Điểm khởi đầu ứng dụng
-├── cluster/                # Cấu hình xử lý đa tiến trình
-├── config/                 # Cấu hình ứng dụng
-├── constants/              # Các hằng số
-├── controllers/            # Xử lý logic từ các route
-├── helpers/                # Các hàm tiện ích
-├── labs/                   # Các tính năng thử nghiệm
-├── middlewares/            # Middleware Express
-├── migrations/             # Migrations cơ sở dữ liệu
-├── models/                 # Mô hình Sequelize
-├── routes/                 # Định nghĩa các route
-├── scripts/                # Script hỗ trợ
-├── server/                 # Cấu hình máy chủ
-├── services/               # Các dịch vụ nghiệp vụ
-├── .env.example            # Mẫu biến môi trường
-├── .gitignore              # Danh sách tệp bỏ qua Git
-├── .sequelizerc            # Cấu hình Sequelize
-├── docker-compose.yml      # Cấu hình Docker
-├── package.json            # Thông tin dự án và dependencies
-└── package-lock.json       # Khóa phiên bản dependencies
+┌─────────────┐      ┌─────────────┐      ┌───────────────┐
+│ API Gateway │ ──▶ │ Service Layer│ ──▶ │ Data Layer    │
+│ (Express)   │ ◀── │ (Business    │ ◀── │ (MySQL/ORM)   │
+└─────────────┘      │  Logic)      │      └───────────────┘
+                     └─────────────┘
+                           │ ▲
+                           ▼ │
+                     ┌─────────────┐      ┌───────────────┐
+                     │ Caching     │ ──▶ │ File Storage  │
+                     │ Layer       │ ◀── │ (Local/Cloud) │
+                     └─────────────┘      └───────────────┘
+                           │ ▲
+                           ▼ │
+                     ┌─────────────┐
+                     │ Clustering  │
+                     │ & Scaling   │
+                     └─────────────┘
 ```
 
-## Các tính năng
+## 2. Các module chính
 
-### AI Text Generation
+### API Routing & Middleware
+- **Express**: Cung cấp các API endpoint
+- **Middleware**: Xử lý lỗi, CORS, JSON parsing
+- **Validation**: Kiểm tra tham số TTS, context, v.v.
 
-- Endpoint: `/api/v2/ai-gen`
-- Cho phép gửi prompt và nhận phản hồi từ mô hình AI
-- Hỗ trợ duy trì ngữ cảnh hội thoại qua nhiều lượt tương tác
-- Đồng bộ hóa và khóa ngữ cảnh để tránh xung đột
+```javascript
+// Ví dụ routes (main.routes.js)
+router.get('/test-workflow', (req, res) => res.send('Hello, changed!'));
+// Middleware validation và xử lý lỗi
+const { validateTTSParams, validateTTSV2Params } = require('../middlewares/main.middlewares');
+```
 
-### Tải lên tệp
+### Text-Generation & Conversation Context
+- Tích hợp Google Generative AI để tạo text
+- Lưu trữ và quản lý context của cuộc trò chuyện
+- Hỗ trợ caching kết quả để tối ưu hiệu suất
 
-- Endpoint: `/api/v2/upload-file`
-- Cho phép tải lên tệp để phân tích với AI
-- Hỗ trợ nhiều loại tệp khác nhau
+```javascript
+// Ví dụ từ gen.services.js
+const tryGenerateWithKey = async (apiKey, modelAI, prompt, contextID, req) => {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: modelAI });
+    
+    // Lấy context trò chuyện
+    const contextRecords = await db.ChatMessages.findAll({
+        where: { contextId: contextID },
+        order: [['index', 'ASC']],
+        transaction
+    });
+    
+    // Gọi API với context
+    const result = context
+        ? await model.startChat(context).sendMessage(prompt)
+        : await model.startChat(...).sendMessage(prompt);
+    
+    // Lưu lại lịch sử trò chuyện
+    await db.ChatMessages.bulkCreate([
+        { contextId: contextID, content: prompt, role: 'user', ... },
+        { contextId: contextID, content: result.response.text(), role: 'model', ... }
+    ], { transaction });
+    
+    return { text: result.response.text(), timestamp: createAt };
+};
+```
+
+### File-Based Content Analysis
+- Quản lý upload file
+- Phân tích nội dung file bằng Google Generative AI
+- Lưu trữ kết quả phân tích
+
+```javascript
+// Ví dụ từ gen.services.js
+const fileRecords = await db.Files.findAll({
+    where: { contextId: contextID },
+    transaction
+});
+
+const fileHistorys = await Promise.all(fileRecords.map(async (fileRecord) => {
+    const fileName = path.basename(fileRecord.filePath);
+    const response = await fileManager.uploadFile(path.join(__dirname, '../uploads/', fileRecord.filePath), {
+        mimeType: fileRecord.fileMimeType,
+        displayName: fileName
+    });
+    
+    return {
+        role: "user",
+        parts: [{ text: `File ${fileName}` }, {
+            fileData: {
+                mimeType: response.file.mimeType,
+                fileUri: response.file.uri,
+            },
+        }],
+    };
+}));
+```
+
+### Text-to-Speech (TTS) v1 & v2
+- Hai phiên bản TTS tích hợp
+- Xử lý văn bản, chuyển đổi thành audio
+- Lưu trữ tệp âm thanh và cung cấp URL
+
+```javascript
+// Ví dụ từ tts.controllers.js
+exports.genSpeech = async (req, res) => {
+    try {
+        const { text, voiceId, speed, model } = req.body;
+        const result = await ttsService.ttsIntelligent(text, voiceId, speed, model);
+        res.status(200).json({
+            success: true,
+            message: 'Speech generated successfully',
+            media_url: result.url,
+            timestamp: result.timestamp,
+            error: null
+        });
+    } catch (error) { ... }
+};
+
+// Dịch vụ TTS v2
+exports.genSpeechV2 = async (req, res) => {
+    try {
+        const { text, voiceId, speed, language } = req.body;
+        const result = await ttsServicev2.ttsIntelligent(text, voiceId, speed, language);
+        // xử lý kết quả...
+    } catch (error) { ... }
+};
+```
+
+### Data Layer
+- Sử dụng Sequelize ORM để tương tác với MySQL
+- Các entity: ChatMessages, Files, SpeechRecords, v.v.
+- Sử dụng transactions để đảm bảo tính toàn vẹn dữ liệu
+
+```javascript
+// Ví dụ từ tts.services.js
+const transaction = await db.sequelize.transaction();
+try {
+    await db.SpeechRecords.create({ 
+        recordName: fileName, 
+        serverUrl: url, 
+        createdAt: createAt, 
+        updatedAt: createAt 
+    }, { transaction });
+    await transaction.commit();
+} catch (error) {
+    await transaction.rollback();
+    throw new Error("Failed to save speech record from server");
+}
+```
+
+### Caching Layer
+- Sử dụng bộ nhớ cache cho response
+- Cải thiện hiệu suất bằng cách lưu trữ kết quả text generation
+
+```javascript
+// Ví dụ từ gen.services.js
+const genService = {
+    getAIGenerateWithContext: async (prompt, contextID, modelAI, req) => {
+        const cacheKey = `${contextID}_${prompt}_${modelAI}`;
+        const cachedResponse = await responseCacheService.get(cacheKey);
+        
+        if (cachedResponse) {
+            return cachedResponse;
+        }
+        
+        const response = await tryWithMultipleKeys(prompt, modelAI, contextID, req);
+        
+        await responseCacheService.set(cacheKey, response);
+        
+        return response;
+    }
+};
+```
+
+### Clustering & Scaling
+- Hỗ trợ clustering để mở rộng ứng dụng
+- IPC (Inter-Process Communication) để chia sẻ state giữa các worker
+
+```javascript
+// Ví dụ từ shared-state.services.js
+function initializeSharedServices() {
+    const pendingCallbacks = new Map();
+    let messageIdCounter = 0;
+    
+    process.on('message', (message) => {
+        const callback = pendingCallbacks.get(message.id);
+        if (callback) {
+            callback(message);
+            pendingCallbacks.delete(message.id);
+        }
+    });
+    
+    function sendMessageToMaster(type, data) {
+        return new Promise((resolve) => {
+            const id = messageIdCounter++;
+            pendingCallbacks.set(id, (response) => {
+                resolve(response);
+            });
+            
+            process.send({
+                type,
+                id,
+                ...data
+            });
+        });
+    }
+    
+    // Các dịch vụ khóa context và cache...
+}
+```
+
+### File Storage
+- Lưu trữ file âm thanh TTS cục bộ
+- Tạo thư mục nếu cần thiết
+- Truy cập file thông qua URL
+
+```javascript
+// Ví dụ từ tts.services.js
+const saveBufferToFile = async (buffer, text, voiceId) => {
+    const hash = crypto.createHash('md5')
+        .update(text + voiceId + Date.now())
+        .digest('hex');
+    const fileName = `tts-${hash}.mp3`;
+
+    const filePath = path.join(__dirname, '../public/tts-audio', fileName);
+
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+
+    await fs.promises.writeFile(filePath, buffer);
+
+    return fileName;
+}
+```
+
+## 3. Cấu trúc thư mục
+
+```
+├─ controllers/       # Chứa các controller xử lý request
+│  ├─ aigen.controllers.js  # Xử lý text generation
+│  ├─ context.controller.js # Quản lý context cuộc hội thoại
+│  ├─ tts.controllers.js    # Xử lý TTS
+│  └─ upload.controllers.js # Xử lý upload file
+├─ models/
+│  └─ db.models.js    # Định nghĩa các model DB sử dụng Sequelize
+├─ services/          # Business logic chính
+│  ├─ gen.services.js        # Google Generative AI
+│  ├─ shared-state.services.js # Chia sẻ state giữa các worker
+│  ├─ tts.services.js        # Dịch vụ TTS v1
+│  └─ ttsv2.services.js      # Dịch vụ TTS v2 nâng cao
+├─ middlewares/
+│  └─ main.middlewares.js    # Xử lý lỗi, parsing, validation
+├─ routes/
+│  └─ main.routes.js         # Định nghĩa các API endpoint
+├─ public/            # Thư mục lưu file static
+│  └─ tts-audio/      # Thư mục lưu file âm thanh TTS
+├─ uploads/           # Thư mục tạm lưu file upload
+├─ cluster/           # Mã nguồn liên quan đến clustering
+├─ hosting.js         # Khởi tạo Express app và các middleware
+└─ .env               # Biến môi trường
+```
+
+## 4. Luồng request ví dụ
+
+### Text Generation
+
+1. Client gửi request POST đến API endpoint với prompt và contextId
+2. Middleware xác thực và validate request
+3. Controller xử lý request, chuyển cho service layer
+4. Service kiểm tra cache trước, nếu có thì trả về kết quả
+5. Nếu không, service gọi Google Generative AI API
+6. Kết quả được lưu vào database và cache
+7. Response được trả về cho client
 
 ### Text-to-Speech
 
-- Endpoint: `/api/v2/ttsv1-gen`
-- Chuyển đổi văn bản thành giọng nói
-- Hỗ trợ đa ngôn ngữ nhưng có thể thường xuyên lỗi và không up time 100%
+1. Client gửi request POST với text, voiceId, speed và model
+2. Middleware validate tham số
+3. Controller chuyển request đến ttsService hoặc ttsServicev2
+4. Service chia nhỏ text nếu cần thiết
+5. Gọi API TTS để chuyển đổi từng phần
+6. Kết hợp các phần và lưu file âm thanh
+7. Lưu record vào database và trả URL cho client
 
-- Endpoint: `/api/v2/ttsv2-gen`
-- Chuyển đổi văn bản thành giọng nói
-- Hỗ trợ ngôn ngữ Việt Nam và Anh Ngữ và đảm bảo up time 100%
+## 5. Chú ý về hiệu năng & bảo mật
 
-## Yêu cầu hệ thống
+- **Caching**: Sử dụng caching để giảm số lượng request đến Google API
+- **Transactions**: Đảm bảo tính toàn vẹn dữ liệu bằng transactions
+- **Clustering**: Mở rộng ứng dụng bằng cách sử dụng nhiều worker
+- **Context locking**: Tránh race condition khi nhiều worker cùng truy cập context
+- **Error handling**: Xử lý các lỗi từ API bên ngoài và rollback transaction nếu cần
+- **Timeout handling**: Quản lý timeout trong các request dài
 
-- Node.js (phiên bản 20.x trở lên)
-- MariaDB hoặc MySQL
-- Docker (tùy chọn)
+---
 
-## API Endpoints
-
-| Endpoint | Phương thức | Mô tả |
-|----------|----------|----------|
-| `/helloworld` | GET | Kiểm tra máy chủ hoạt động |
-| `/api/v2/ai-gen` | POST | Tạo văn bản từ AI với prompt |
-| `/api/v2/upload-file` | POST | Tải lên tệp để phân tích với AI |
-| `/api/v2/ttsv1-gen` | POST | Chuyển đổi văn bản thành giọng nói (phiên bản 1 - hỗ trợ đa ngôn ngữ nhưng có thể thường xuyên lỗi và không up time 100%) |
-| `/api/v2/ttsv2-gen` | POST | Chuyển đổi văn bản thành giọng nói (phiên bản 2 - chỉ hỗ trợ ngôn ngữ Việt Nam và Anh Ngữ và đảm bảo up time 100%) |
-
-### Yêu cầu API:
-
-#### Tạo văn bản từ AI:
-```json
-{
-    "prompt": "Văn bản prompt của bạn",
-    "model": "flash hoặc pro",
-    "contextId": "ID ngữ cảnh (tùy chọn)"
-}
-```
-
-#### Phản hồi:
-```json
-{
-    "success": true,
-    "message": "Success",
-    "text": "Phản hồi từ AI",
-    "timestamp": "2023-06-30 12:34:56",
-    "contextId": "ID ngữ cảnh",
-    "error": null
-}
-```
-
-## Xử lý đa tiến trình
-
-Dự án sử dụng module `cluster` của Node.js để tận dụng tối đa nguồn lực CPU bằng cách tạo nhiều tiến trình worker. Điều này giúp nâng cao hiệu suất khi xử lý nhiều yêu cầu đồng thời.
-
-## Lưu trữ và bộ nhớ đệm
-
-- Hệ thống sử dụng Sequelize ORM để tương tác với cơ sở dữ liệu MariaDB/MySQL
-- Bộ nhớ đệm được triển khai để lưu trữ phản hồi của AI, giảm thiểu việc gọi API lặp lại
-- Quản lý ngữ cảnh hội thoại thông qua cơ sở dữ liệu
-
-## Xử lý lỗi và thử lại
-
-Hệ thống được thiết kế để:
-- Xử lý các trường hợp quá thời gian (timeout)
-- Thử lại với nhiều API key khác nhau nếu một key gặp lỗi
-- Khóa và giải phóng ngữ cảnh để tránh xung đột
+Tài liệu này mô tả tổng quan về API Platform AI được xây dựng trên Node.js/Express, với các dịch vụ Google Generative AI, Text-to-Speech, và xử lý file. Các tính năng chính bao gồm quản lý context, caching, clustering và lưu trữ file.
