@@ -7,6 +7,7 @@ const contextController = require('../controllers/context.controller');
 
 const router = Router();
 
+router.get('/test-workflow', (req, res) => res.send('Hello, changed!'));
 router.get('/helloworld', (req, res) => res.send('Hello World'));
 router.post('/api/v2/ai-gen', mainController.aiGenerate);
 router.post('/api/v2/upload-file', uploadController.uploadFile);

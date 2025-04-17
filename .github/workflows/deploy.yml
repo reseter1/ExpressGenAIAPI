@@ -34,8 +34,23 @@ jobs:
          .production.database = $database' \
         config/database.config.json > tmp.json && mv tmp.json config/database.config.json
 
+    - name: Install dependencies
+      run: npm install
+
     - name: Remove .git folder
       run: rm -rf .git
+
+    - name: Copy to hosting
+      uses: appleboy/scp-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USERNAME }}
+        password: ${{ secrets.SSH_PASSWORD }}
+        port: 22
+        source: "./*"
+        target: "/workspaces/Project1"
+        rm: false
+        overwrite: true
 
     - name: Restart PM2 via SSH
       uses: appleboy/ssh-action@master
