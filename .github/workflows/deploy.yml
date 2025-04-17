@@ -37,12 +37,10 @@ jobs:
     - name: Remove .git folder
       run: rm -rf .git
 
-    - name: Deploy
-      uses: Techie-Pi/node-vps-deployment@main
+    - name: Restart PM2 via SSH
+      uses: appleboy/ssh-action@master
       with:
-        remote-path: "/workspaces/Project1"
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
-        port: 22
         password: ${{ secrets.SSH_PASSWORD }}
-        pm2-id: "0"
+        script: source ~/.bashrc && pm2 restart 0
