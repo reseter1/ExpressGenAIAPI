@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to VPS
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
     - name: Remove .git folder
       run: rm -rf .git
 
-    - name: Copy to hosting
+    - name: Copy to VPS
       uses: appleboy/scp-action@master
       with:
         host: ${{ secrets.SSH_HOST }}
@@ -48,7 +48,7 @@ jobs:
         password: ${{ secrets.SSH_PASSWORD }}
         port: 22
         source: "./*"
-        target: "/workspace/Project1"
+        target: "/root/Unify/GenAI"
         rm: false
         overwrite: true
 
@@ -58,7 +58,12 @@ jobs:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USERNAME }}
         password: ${{ secrets.SSH_PASSWORD }}
+        port: 22
         script: |
           export PATH=$PATH:/root/.nvm/versions/node/v20.19.0/bin
           which pm2
-          pm2 restart 0
+          pm2 restart app
+
+      - name: Finish
+        run: |
+          echo "Deployment completed successfully"
