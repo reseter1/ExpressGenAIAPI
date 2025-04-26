@@ -7,7 +7,7 @@ const mainRoutes = require('./routes/main.routes');
 const { errorHandlingMiddleware, expressJsonMiddleware } = require('./middlewares/main.middlewares');
 const { initializeSharedServices } = require('./services/non-cluster-shared-state.services');
 require('dotenv').config();
-const PORT = 6789;
+const PORT = 3000;
 
 function createServer() {
     const app = express();
@@ -28,7 +28,7 @@ async function startServer() {
 
     try {
         await db.sequelize.authenticate();
-        app.listen(PORT, () => {
+        app.listen(PORT, '0.0.0.0', () => {
             console.log('Connected to the database successfully.');
             console.log(`Server is running on port ${PORT}`);
         });
