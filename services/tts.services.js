@@ -5,7 +5,7 @@ const moment = require('moment-timezone');
 const db = require('../models/db.models');
 
 const tts = async (text, voiceId, speed, model) => {
-    const auths = process.env.AUTH_TTS_LIST.split('|');
+    const auths = process.env.AUTH_TTS_LIST.split('|').map(auth => `Bearer ${auth}`);
 
     for (const auth of auths) {
         try {
